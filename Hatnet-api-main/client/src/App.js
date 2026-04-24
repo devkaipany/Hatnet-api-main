@@ -8,7 +8,10 @@ const TENANTS = [
   { id: "nsbb",    label: "NSBB",    routePrefix: "NSBB" },
 ];
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3001";
+// Production (Vercel): cùng domain → gọi relative URL ""
+// Development (local): React port 3000, API port 3001
+const API_BASE = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001");
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function toMs(datetimeLocalStr) {
