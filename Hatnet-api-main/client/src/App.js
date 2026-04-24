@@ -5,7 +5,7 @@ import "./App.css";
 // Khi thêm tenant mới vào tenants.json, thêm entry tương ứng vào đây.
 const TENANTS = [
   { id: "kaipany", label: "Kaipany", routePrefix: "Kaipany" },
-  { id: "nsbb",    label: "NSBB",    routePrefix: "NSBB" },
+  { id: "nsbb", label: "NSBB", routePrefix: "NSBB" },
 ];
 
 // Production (Vercel): cùng domain → gọi relative URL ""
@@ -68,8 +68,8 @@ function TenantQueryTab() {
   // URL preview — cập nhật realtime theo form
   const previewUrl = React.useMemo(() => {
     if (!form.placeId) return null;
-    const dateFrom = toMs(form.from) ?? (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
-    const dateTo   = toMs(form.to)   ?? Date.now();
+    const dateFrom = toMs(form.from) ?? (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+    const dateTo = toMs(form.to) ?? Date.now();
     const params = new URLSearchParams({ placeId: form.placeId, dateFrom, dateTo });
     if (form.deviceId) params.append("deviceId", form.deviceId);
     return `${API_BASE}/${activeTenant.routePrefix}/checkins?${params}`;
@@ -101,7 +101,7 @@ function TenantQueryTab() {
 
   useEffect(() => {
     fetchPlaces();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTenant]);  // activeTenant thay đổi → fetch lại, luôn dùng đúng tenant
 
   // Fetch devices khi đổi place
@@ -134,8 +134,8 @@ function TenantQueryTab() {
     setResults(null);
 
     try {
-      const dateFrom = toMs(form.from) ?? (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
-      const dateTo   = toMs(form.to)   ?? Date.now();
+      const dateFrom = toMs(form.from) ?? (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+      const dateTo = toMs(form.to) ?? Date.now();
       if (dateFrom > dateTo) throw new Error("Thời gian bắt đầu không được lớn hơn thời gian kết thúc.");
 
       const params = new URLSearchParams({ placeId: form.placeId, dateFrom, dateTo });
@@ -226,8 +226,8 @@ function TenantQueryTab() {
                   {!form.placeId
                     ? "-- Chọn địa điểm trước --"
                     : loadingDevices
-                    ? "Đang tải…"
-                    : "-- Tất cả thiết bị --"}
+                      ? "Đang tải…"
+                      : "-- Tất cả thiết bị --"}
                 </option>
                 {devices.map((d) => (
                   <option key={d.deviceID} value={d.deviceID}>
@@ -455,7 +455,7 @@ function AddApiTab() {
                 />
                 {form.routePrefix && (
                   <span className="form-hint">
-                    🔗 Route tự động: <code style={{color:"var(--accent)",background:"var(--surface-3)",padding:"1px 5px",borderRadius:4}}>/{form.routePrefix}/checkins</code>
+                    🔗 Route tự động: <code style={{ color: "var(--accent)", background: "var(--surface-3)", padding: "1px 5px", borderRadius: 4 }}>/{form.routePrefix}/checkins</code>
                   </span>
                 )}
               </div>
