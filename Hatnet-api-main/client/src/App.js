@@ -8,9 +8,12 @@ const TENANTS = [
   { id: "nsbb", label: "NSBB", routePrefix: "NSBB" },
 ];
 
-// Production (Vercel): cùng domain → gọi relative URL ""
-// Development (local): React port 3000, API port 3001
-const API_BASE = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001");
+// Production: API deploy riêng tại hatnet-api.vercel.app
+// Development: React port 3000, API port 3001
+const API_BASE = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://hatnet-api.vercel.app"
+    : "http://localhost:3001");
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
