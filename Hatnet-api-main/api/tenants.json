@@ -1,0 +1,24 @@
+{
+  "tenants": [
+    {
+      "id": "kaipany",
+      "routePrefix": "Kaipany",
+      "active": true,
+      "hanetApiBaseUrl": "https://partner.hanet.ai",
+      "tokenUrl": "https://oauth.hanet.com/token",
+      "clientId": "f0be87733479240e6bcd146974da9875",
+      "clientSecret": "bcf6bf314681dc2e2a90cf946c998c24",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg3NjU5MzM2NjE3MjQ5OTEzMTkiLCJlbWFpbCI6IkNFT0hOOEBnbWFpbC5jb20iLCJjbGllbnRfaWQiOiJmMGJlODc3MzM0NzkyNDBlNmJjZDE0Njk3NGRhOTg3NSIsInR5cGUiOiJyZWZyZXNoX3Rva2VuIiwiaWF0IjoxNzc3MDE1NzEzLCJleHAiOjE4MDg1NTE3MTN9.oyTeI9dUYBmHOx6cex__LdoqXQHnV24hJFsTCZGsNCo"
+    },
+    {
+      "id": "nsbb",
+      "routePrefix": "NSBB",
+      "active": true,
+      "hanetApiBaseUrl": "https://partner.hanet.ai",
+      "tokenUrl": "https://oauth.hanet.com/token",
+      "clientId": "d2ffb39ae632f8161a38a3a414a11d88",
+      "clientSecret": "d6d890a10859588af48f3765c05dfa59",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjMyMTM5NzA1ODkzMTIwOTAwMDAiLCJlbWFpbCI6ImhyQG5zYmIudm4iLCJjbGllbnRfaWQiOiJkMmZmYjM5YWU2MzJmODE2MWEzOGEzYTQxNGExMWQ4OCIsInR5cGUiOiJyZWZyZXNoX3Rva2VuIiwiaWF0IjoxNzc3MDE1MjI2LCJleHAiOjE4MDg1NTEyMjZ9.0D0KuCXryYCUvhFJfq5gTEbMgIjqnyvYnIjscCHryAA"
+    }
+  ]
+}
