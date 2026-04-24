@@ -12,8 +12,8 @@ const TENANTS = [
 // Development: React port 3000, API port 3001
 const API_BASE = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === "production"
-    ? "https://hatnet-api.vercel.app"
-    : "http://localhost:3001");
+    ? "https://hatnet-api-main-o22c.vercel.app/"
+    : "https://hatnet-api-main-o22c.vercel.app/");
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
