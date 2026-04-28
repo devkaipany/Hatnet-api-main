@@ -119,10 +119,11 @@ function filterCheckinsByDay(data) {
 }
 
 function formatTimestamp(timestamp) {
-  const date = new Date(timestamp);
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const seconds = date.getSeconds().toString().padStart(2, "0");
+  // Dùng UTC+7 cố định để hiển thị đúng giờ Việt Nam trên mọi server
+  const d = new Date(timestamp + VN_OFFSET_MS);
+  const hours   = d.getUTCHours().toString().padStart(2, "0");
+  const minutes = d.getUTCMinutes().toString().padStart(2, "0");
+  const seconds = d.getUTCSeconds().toString().padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 }
 
