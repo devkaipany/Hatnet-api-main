@@ -5,6 +5,46 @@
 const axios = require("axios");
 const qs = require("qs");
 
+// ── Múi giờ Việt Nam (UTC+7) ─────────────────────────────────────────────────
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/** Trả về đầu ngày (00:00:00.000) theo giờ VN dưới dạng UTC timestamp */
+function vnStartOfDay(utcTs) {
+  const vnMs = utcTs + VN_OFFSET_MS;
+  return Math.floor(vnMs / 86400000) * 86400000 - VN_OFFSET_MS;
+}
+
+/** Trả về cuối ngày (23:59:59.999) theo giờ VN dưới dạng UTC timestamp */
+function vnEndOfDay(utcTs) {
+  return vnStartOfDay(utcTs) + 86400000 - 1;
+}
+
+/** Trả về timestamp đầu tháng theo giờ VN */
+function vnStartOfMonth(utcTs) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  // Ngày 1 của tháng theo UTC "ảo" rồi trừ offset
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - VN_OFFSET_MS;
+}
+
+/** Trả về timestamp cuối tháng (23:59:59.999) theo giờ VN */
+function vnEndOfMonth(utcTs) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  // Ngày 0 của tháng tiếp = ngày cuối của tháng hiện tại
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0) - VN_OFFSET_MS + 86400000 - 1;
+}
+
+/** Cộng thêm N tháng (theo giờ VN) vào UTC timestamp, trả về timestamp đầu tháng mới */
+function vnAddMonths(utcTs, n) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1) - VN_OFFSET_MS;
+}
+
+/** Đặt ngày trong tháng (theo giờ VN) */
+function vnSetDate(utcTs, dayOfMonth) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), dayOfMonth) - VN_OFFSET_MS;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatTimestamp(timestamp) {
@@ -109,11 +149,9 @@ async function fetchCheckinDataForTimeRange(
     throw new Error("Timestamp không hợp lệ");
   }
 
-  // Chuẩn hóa về đầu ngày / cuối ngày (chỉ tính 1 lần)
-  const fromDate = new Date(fromTimestamp); fromDate.setHours(0,0,0,0);
-  const toDate   = new Date(toTimestamp);   toDate.setHours(23,59,59,999);
-  const adjustedFrom = fromDate.getTime();
-  const adjustedTo   = toDate.getTime();
+  // Chuẩn hóa về đầu ngày / cuối ngày theo giờ Việt Nam (UTC+7)
+  const adjustedFrom = vnStartOfDay(fromTimestamp);
+  const adjustedTo   = vnEndOfDay(toTimestamp);
 
   for (let index = 1; index <= MAX_PAGES; index++) {
     const requestData = {
@@ -319,22 +357,15 @@ function createHanetService(tenantConfig) {
     }
 
     // Thêm chunk theo tháng để đảm bảo không bỏ sót tháng nào
-    let monthCursor = new Date(fromTime);
-    monthCursor.setDate(1);
-    monthCursor.setHours(0, 0, 0, 0);
+    // Dùng múi giờ Việt Nam (UTC+7) để tính đầu/cuối tháng
+    let monthCursorTs = vnStartOfMonth(fromTime);
 
-    while (monthCursor.getTime() < toTime) {
-      const monthStart = new Date(monthCursor);
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
+    while (monthCursorTs < toTime) {
+      const monthStartTs = monthCursorTs;
+      const monthEndTs   = vnEndOfMonth(monthCursorTs);
 
-      const monthEnd = new Date(monthCursor);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
-      monthEnd.setDate(0);
-      monthEnd.setHours(23, 59, 59, 999);
-
-      const actualStart = Math.max(monthStart.getTime(), fromTime);
-      const actualEnd = Math.min(monthEnd.getTime(), toTime);
+      const actualStart = Math.max(monthStartTs, fromTime);
+      const actualEnd   = Math.min(monthEndTs, toTime);
 
       if (actualStart < actualEnd) {
         chunkList.push({ start: actualStart, end: actualEnd, isMonthChunk: true });
@@ -348,33 +379,27 @@ function createHanetService(tenantConfig) {
 
         // Giữa tháng
         if (actualEnd - actualStart > 14 * ONE_DAY) {
-          const midStart = new Date(monthStart);
-          midStart.setDate(10);
-          midStart.setHours(0, 0, 0, 0);
-          const midEnd = new Date(midStart);
-          midEnd.setDate(midStart.getDate() + 7);
-          midEnd.setHours(23, 59, 59, 999);
+          const midStart = vnStartOfDay(vnSetDate(monthStartTs, 10));
+          const midEnd   = vnEndOfDay(midStart + 7 * ONE_DAY);
           chunkList.push({
-            start: Math.max(midStart.getTime(), actualStart),
-            end: Math.min(midEnd.getTime(), actualEnd),
+            start: Math.max(midStart, actualStart),
+            end: Math.min(midEnd, actualEnd),
             isMiddleChunk: true,
           });
         }
 
         // Tuần cuối tháng
         if (actualEnd - actualStart > 7 * ONE_DAY) {
-          const endWeekStart = new Date(monthEnd);
-          endWeekStart.setDate(monthEnd.getDate() - 6);
-          endWeekStart.setHours(0, 0, 0, 0);
+          const endWeekStart = vnStartOfDay(monthEndTs - 6 * ONE_DAY);
           chunkList.push({
-            start: Math.max(endWeekStart.getTime(), actualStart),
+            start: Math.max(endWeekStart, actualStart),
             end: actualEnd,
             isEndChunk: true,
           });
         }
       }
 
-      monthCursor.setMonth(monthCursor.getMonth() + 1);
+      monthCursorTs = vnAddMonths(monthCursorTs, 1);
     }
 
     console.log(`${label} Truy vấn ${totalDays} ngày, sử dụng ${chunkList.length} chunk.`);

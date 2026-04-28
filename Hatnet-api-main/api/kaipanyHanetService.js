@@ -10,6 +10,44 @@ if (!HANET_API_BASE_URL) {
   console.log("Sử dụng URL mặc định https://partner.hanet.ai");
 }
 
+// ── Múi giờ Việt Nam (UTC+7) ─────────────────────────────────────────────────
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/** Trả về đầu ngày (00:00:00.000) theo giờ VN dưới dạng UTC timestamp */
+function vnStartOfDay(utcTs) {
+  const vnMs = utcTs + VN_OFFSET_MS;
+  return Math.floor(vnMs / 86400000) * 86400000 - VN_OFFSET_MS;
+}
+
+/** Trả về cuối ngày (23:59:59.999) theo giờ VN dưới dạng UTC timestamp */
+function vnEndOfDay(utcTs) {
+  return vnStartOfDay(utcTs) + 86400000 - 1;
+}
+
+/** Trả về timestamp đầu tháng theo giờ VN */
+function vnStartOfMonth(utcTs) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - VN_OFFSET_MS;
+}
+
+/** Trả về timestamp cuối tháng (23:59:59.999) theo giờ VN */
+function vnEndOfMonth(utcTs) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0) - VN_OFFSET_MS + 86400000 - 1;
+}
+
+/** Cộng thêm N tháng (theo giờ VN), trả về timestamp đầu tháng mới */
+function vnAddMonths(utcTs, n) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1) - VN_OFFSET_MS;
+}
+
+/** Đặt ngày trong tháng (theo giờ VN) */
+function vnSetDate(utcTs, dayOfMonth) {
+  const d = new Date(utcTs + VN_OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), dayOfMonth) - VN_OFFSET_MS;
+}
+
 function filterCheckinsByDay(data) {
   try {
     if (!data || !data.data || !Array.isArray(data.data)) {
@@ -125,83 +163,58 @@ async function getPeopleListByMethod(placeId, dateFrom, dateTo, devices) {
   const timeRange = toTime - fromTime;
   const totalDays = Math.ceil(timeRange / ONE_DAY);
   
-  // Giải pháp triệt để: Sử dụng đoạn thời gian ngắn để đảm bảo không bỏ sót dữ liệu
-  // Giảm xuống còn 3 ngày mỗi đoạn để đảm bảo dữ liệu hoàn toàn đầy đủ
-  const CHUNK_SIZE = 3 * ONE_DAY; // Luôn sử dụng đoạn 3 ngày
-  
-  // Tạo danh sách các đoạn theo tháng để đảm bảo không bỏ sót tháng nào
+  // Tạo danh sách các đoạn - trước tiên theo chu kỳ 3 ngày
+  const CHUNK_SIZE = 3 * ONE_DAY;
   const chunkList = [];
-  
-  // Trước tiên, tạo các đoạn chia theo chu kỳ 7 ngày
+
   let tmpStart = fromTime;
   while (tmpStart < toTime) {
-    let tmpEnd = Math.min(tmpStart + CHUNK_SIZE, toTime);
+    const tmpEnd = Math.min(tmpStart + CHUNK_SIZE, toTime);
     chunkList.push({ start: tmpStart, end: tmpEnd });
     tmpStart = tmpEnd;
   }
-  
+
   // Sau đó, thêm các đoạn cho từng tháng từ fromTime đến toTime
-  // Để đảm bảo lấy đủ dữ liệu của mỗi tháng
-  tmpStart = new Date(fromTime);
-  tmpStart.setDate(1); // Ngày đầu tiên của tháng
-  tmpStart.setHours(0, 0, 0, 0);
-  
-  while (tmpStart.getTime() < toTime) {
-    // Đầu tháng
-    const monthStart = new Date(tmpStart);
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    
-    // Cuối tháng
-    const monthEnd = new Date(tmpStart);
-    monthEnd.setMonth(monthEnd.getMonth() + 1);
-    monthEnd.setDate(0); // Ngày cuối cùng của tháng hiện tại
-    monthEnd.setHours(23, 59, 59, 999);
-    
-    // Chỉ thêm đoạn nếu nằm trong khoảng thời gian yêu cầu
-    const actualStart = Math.max(monthStart.getTime(), fromTime);
-    const actualEnd = Math.min(monthEnd.getTime(), toTime);
-    
+  // Dùng múi giờ Việt Nam (UTC+7) để tính đầu/cuối tháng
+  let monthCursorTs = vnStartOfMonth(fromTime);
+
+  while (monthCursorTs < toTime) {
+    const monthStartTs = monthCursorTs;
+    const monthEndTs   = vnEndOfMonth(monthCursorTs);
+
+    const actualStart = Math.max(monthStartTs, fromTime);
+    const actualEnd   = Math.min(monthEndTs, toTime);
+
     if (actualStart < actualEnd) {
-      // Thêm đoạn toàn bộ tháng
       chunkList.push({ start: actualStart, end: actualEnd, isMonthChunk: true });
-      
-      // Thêm các đoạn nhỏ hơn (tuần đầu, giữa và cuối tháng)
+
       // Tuần đầu tháng
       chunkList.push({ start: actualStart, end: Math.min(actualStart + 7 * ONE_DAY, actualEnd), isWeekChunk: true });
-      
+
       // Giữa tháng
       if (actualEnd - actualStart > 14 * ONE_DAY) {
-        const midStart = new Date(monthStart);
-        midStart.setDate(10); // Khoảng giữa tháng
-        midStart.setHours(0, 0, 0, 0);
-        const midEnd = new Date(midStart);
-        midEnd.setDate(midStart.getDate() + 7);
-        midEnd.setHours(23, 59, 59, 999);
-        
-        chunkList.push({ 
-          start: Math.max(midStart.getTime(), actualStart), 
-          end: Math.min(midEnd.getTime(), actualEnd),
+        const midStart = vnStartOfDay(vnSetDate(monthStartTs, 10));
+        const midEnd   = vnEndOfDay(midStart + 7 * ONE_DAY);
+        chunkList.push({
+          start: Math.max(midStart, actualStart),
+          end: Math.min(midEnd, actualEnd),
           isMiddleChunk: true
         });
       }
-      
+
       // Tuần cuối tháng
       if (actualEnd - actualStart > 7 * ONE_DAY) {
-        const endWeekStart = new Date(monthEnd);
-        endWeekStart.setDate(monthEnd.getDate() - 6); // 7 ngày cuối tháng
-        endWeekStart.setHours(0, 0, 0, 0);
-        
-        chunkList.push({ 
-          start: Math.max(endWeekStart.getTime(), actualStart), 
+        const endWeekStart = vnStartOfDay(monthEndTs - 6 * ONE_DAY);
+        chunkList.push({
+          start: Math.max(endWeekStart, actualStart),
           end: actualEnd,
           isEndChunk: true
         });
       }
     }
-    
+
     // Chuyển sang tháng tiếp theo
-    tmpStart.setMonth(tmpStart.getMonth() + 1);
+    monthCursorTs = vnAddMonths(monthCursorTs, 1);
   }
   
   // Đảm bảo không có lỗ hổng giữa các đoạn
@@ -330,22 +343,10 @@ async function fetchCheckinDataForTimeRange(placeId, dateFrom, dateTo, devices, 
     
     // Đảm bảo fromTimestamp là đầu ngày (00:00:00) và toTimestamp là cuối ngày (23:59:59)
     // Điều này giúp tránh vấn đề múi giờ và đảm bảo lấy đủ dữ liệu trong ngày
-    const fromDate = new Date(fromTimestamp);
-    const toDate = new Date(toTimestamp);
-    
-    // Chỉnh fromDate về đầu ngày nếu chưa phải
-    if (fromDate.getHours() !== 0 || fromDate.getMinutes() !== 0 || fromDate.getSeconds() !== 0) {
-      fromDate.setHours(0, 0, 0, 0);
-    }
-    
-    // Chỉnh toDate về cuối ngày nếu chưa phải
-    if (toDate.getHours() !== 23 || toDate.getMinutes() !== 59 || toDate.getSeconds() !== 59) {
-      toDate.setHours(23, 59, 59, 999);
-    }
-    
-    // Cập nhật timestamp sau khi đã chuẩn hóa
-    const adjustedFromTimestamp = fromDate.getTime();
-    const adjustedToTimestamp = toDate.getTime();
+    // Chỉnh fromDate về đầu ngày theo giờ Việt Nam
+    const adjustedFromTimestamp = vnStartOfDay(fromTimestamp);
+    // Chỉnh toDate về cuối ngày theo giờ Việt Nam
+    const adjustedToTimestamp = vnEndOfDay(toTimestamp);
   
     // Log ra giá trị thởi gian đã chuyển đổi và chuẩn hóa để debug
     console.log(`Kaipany: Timestamp đã chuẩn hóa: from=${adjustedFromTimestamp} (${new Date(adjustedFromTimestamp).toISOString()}), to=${adjustedToTimestamp} (${new Date(adjustedToTimestamp).toISOString()})`);

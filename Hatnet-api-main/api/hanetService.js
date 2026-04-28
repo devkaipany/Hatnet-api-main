@@ -48,6 +48,27 @@ if (!HANET_API_BASE_URL) {
   console.error("Lỗi: Biến môi trường HANET_API_BASE_URL chưa được thiết lập.");
 }
 
+// ── Múi giờ Việt Nam (UTC+7) ─────────────────────────────────────────────────
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000; // 7 tiếng tính bằng ms
+
+/** Trả về đầu ngày (00:00:00.000) theo giờ VN dưới dạng UTC timestamp */
+function vnStartOfDay(utcTimestamp) {
+  const vnMs = utcTimestamp + VN_OFFSET_MS;
+  const vnMidnight = Math.floor(vnMs / 86400000) * 86400000;
+  return vnMidnight - VN_OFFSET_MS;
+}
+
+/** Trả về cuối ngày (23:59:59.999) theo giờ VN dưới dạng UTC timestamp */
+function vnEndOfDay(utcTimestamp) {
+  return vnStartOfDay(utcTimestamp) + 86400000 - 1;
+}
+
+/** Tách năm/tháng/ngày theo giờ VN từ UTC timestamp */
+function vnDateParts(utcTimestamp) {
+  const d = new Date(utcTimestamp + VN_OFFSET_MS);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() };
+}
+
 async function getPeopleListByPlace() {
   let places = [];
   try {
@@ -76,14 +97,10 @@ async function getPeopleListByPlace() {
     throw new Error("Không lấy được Access Token hợp lệ.");
   }
 
-  const ngayHienTai = new Date();
-  const nam = ngayHienTai.getFullYear();
-  const thang = ngayHienTai.getMonth();
-  const ngay = ngayHienTai.getDate();
-  const dauNgay = new Date(nam, thang, ngay, 0, 0, 0, 0);
-  const dateFrom = dauNgay.getTime();
-  const cuoiNgayMucTieu = new Date(nam, thang, ngay, 23, 0, 0, 0);
-  const dateTo = cuoiNgayMucTieu.getTime();
+  // Dùng múi giờ Việt Nam (UTC+7) để xác định ngày hiện tại
+  const now = Date.now();
+  const dateFrom = vnStartOfDay(now);
+  const dateTo = vnEndOfDay(now);
 
   for (const place of places) {
     if (!place || typeof place.id === "undefined") {
